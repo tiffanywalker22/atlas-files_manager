@@ -1,4 +1,5 @@
 const dbClient = require('../utils/db');
+const crypto = require('crypto');
 
 class UsersController {
     async postNew(req, res) {
