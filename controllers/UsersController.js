@@ -1,4 +1,5 @@
 const dbClient = require('../utils/db');
+const redisClient = require('../utils/redis');
 const crypto = require('crypto');
 
 class UsersController {
@@ -33,6 +34,29 @@ class UsersController {
             console.error('Error creating user:', err);
             return res.status(500).json({ error: 'Internal Server Error' });
         }
+    }
+
+    async getMe(req, res) {
+        const token = req.headers['x-token'];
+        if (!token) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+
+        const key = `auth_${token}`;
+        const userId = await redisClient.get(key);
+        if (!userId) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+
+        const user = await dbClient.users.findOne({ _id: dbClient.ObjectId(userId) });
+        if (!user) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+
+        return res.status(200).json({
+            id: user._id,
+            email: user.email,
+        });
     }
 }
 
