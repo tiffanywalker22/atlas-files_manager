@@ -4,6 +4,8 @@ const fs = require('fs').promises;
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
 const mime = require('mime-types');
+const fileQueue = require('../utils/fileQueue');
+
 
 class FilesController {
     async postUpload(req, res) {
@@ -61,6 +63,10 @@ class FilesController {
             }
 
             const result = await dbClient.files.insertOne(fileDocument);
+
+            if (type === 'image') {
+                await fileQueue.add({ userId: fileDocument.userId.toString(), fileId: result.insertedId.toString() });
+            }
 
             return res.status(201).json({
                 id: result.insertedId,
@@ -190,6 +196,7 @@ class FilesController {
     }
     async getFile(req, res) {
         const fileId = req.params.id;
+        const size = req.query.size;
         const token = req.headers['x-token'] || null;
 
         try {
@@ -208,6 +215,11 @@ class FilesController {
 
             if (file.type === 'folder') {
                 return res.status(400).json({ error: "A folder doesn't have content" });
+            }
+
+            let filePath = file.localPath;
+            if (size && ['100', '250', '500'].includes(size)) {
+                filePath = `${filePath}_${size}`;
             }
 
             if (!file.localPath || !(await fs.access(file.localPath).then(() => true).catch(() => false))) {
