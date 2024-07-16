@@ -1,6 +1,7 @@
 const dbClient = require('../utils/db');
 const redisClient = require('../utils/redis');
 const crypto = require('crypto');
+const userQueue = require('../utils/userQueue');
 
 class UsersController {
     async postNew(req, res) {
@@ -25,6 +26,8 @@ class UsersController {
                 email,
                 password: hashedPassword,
             });
+
+            await userQueue.add({ userId: result.insertedId });
 
             return res.status(201).json({
                 id: result.insertedId,
